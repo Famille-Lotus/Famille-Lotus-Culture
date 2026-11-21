@@ -24,18 +24,22 @@ let pool=[],index=0,answered=false;
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function persist() {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) throw new Error('Sauvegarde invalide');
-    const merged = {...saved, ...progress};
-    for (const [id, passed] of Object.entries(saved)) {
-      if (passed === true) Object.defineProperty(merged, id, {value:true, enumerable:true, writable:true, configurable:true});
-    }
+    const merged = readMergedProgress();
     localStorage.setItem(KEY, JSON.stringify(merged));
     progress = merged;
     $('status').textContent = 'Progression enregistrée dans ce navigateur.';
   } catch {
     $('status').textContent = 'Progression temporaire : enregistrement indisponible.';
   }
+}
+function readMergedProgress() {
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) throw new Error('Sauvegarde invalide');
+    const merged = {...saved, ...progress};
+    for (const [id, passed] of Object.entries(saved)) {
+      if (passed === true) Object.defineProperty(merged, id, {value:true, enumerable:true, writable:true, configurable:true});
+    }
+    return merged;
 }
 const CATEGORY_ICONS={"Culture générale": "🧠", "Cinéma": "🎬", "Géographie": "🌍", "Histoire": "📜", "Sciences": "🔬", "Animaux": "🐾", "Musiques du monde": "🎵", "Logique": "🧩", "Mémoire": "🗂️", "Mathématiques": "➗", "Français": "📖", "Anglais": "🔤", "Informatique": "💻", "Économie": "📈", "Statistiques": "📊", "Biologie cellulaire": "🧬", "Méthodologie": "📝", "Acteurs et actrices": "🎭", "Gastronomie du monde": "🍽️", "Afrique": "🌍", "RDC": "🇨🇩", "Histoire des inventions": "💡", "Astronomie": "🔭", "Éducation financière": "💶", "Dictée et orthographe": "✍️", "Analyse mathématique": "∫", "Découverte du monde": "🧭", "Art": "🎨", "Musées": "🏛️", "Sport": "🏅", "Paroles à compléter — musiques du monde et africaines": "🎤", "CEB — Français": "📖", "CEB — Mathématiques": "➗", "CEB — Sciences": "🔬", "CEB — Histoire et géographie": "🗺️", "CE1D — Français": "📖", "CE1D — Mathématiques": "➗", "CE1D — Sciences": "🔬", "CE1D — Anglais (écrit)": "🔤", "CE1D — Néerlandais (écrit)": "💬"};
 const CATEGORY_COLORS={"Toutes les catégories": "#f96c74", "Culture générale": "#f9a16c", "Cinéma": "#f9de6c", "Géographie": "#7df96c", "Histoire": "#6cf9e3", "Sciences": "#6cc1f9", "Animaux": "#f9757a", "Musiques du monde": "#f9a975", "Logique": "#f9e375", "Mémoire": "#83f975", "Mathématiques": "#75f9e7", "Français": "#75c3f9", "Anglais": "#fa7e80", "Informatique": "#fab17e", "Économie": "#fae77e", "Statistiques": "#88fa7e", "Biologie cellulaire": "#7efaeb", "Méthodologie": "#7ec4fa", "Acteurs et actrices": "#fa8787", "Gastronomie du monde": "#fab987", "Afrique": "#faeb87", "RDC": "#8efa87", "Histoire des inventions": "#87faee", "Astronomie": "#87c6fa", "Éducation financière": "#fa918f", "Dictée et orthographe": "#fac08f", "Analyse mathématique": "#faee8f", "Découverte du monde": "#95fa8f", "Art": "#8ffaf2", "Musées": "#8fc8fa", "Sport": "#fb9c98", "Paroles à compléter — musiques du monde et africaines": "#fbc698", "CEB — Français": "#fbf198", "CEB — Mathématiques": "#9bfb98", "CEB — Sciences": "#98fbf4", "CEB — Histoire et géographie": "#98cbfb", "CE1D — Français": "#fba6a1", "CE1D — Mathématiques": "#fbcda1", "CE1D — Sciences": "#fbf4a1", "CE1D — Anglais (écrit)": "#a2fba1", "CE1D — Néerlandais (écrit)": "#a1fbf7"};
@@ -49,7 +53,7 @@ $('all').onclick=()=>{pool=shuffle(selectedBank());index=0;if(pool.length)show()
 catalogue();
 
 function validateSave(data){if(!data||data.app!=='lotus-culture-reconstruction'||data.version!==1||!data.progress||typeof data.progress!=='object'||Array.isArray(data.progress))throw Error('Format incompatible');const ids=new Set(BANK.map(q=>q.id)),safe={};for(const [id,value] of Object.entries(data.progress)){if(typeof value!=='boolean')throw Error('Progression invalide');if(ids.has(id))safe[id]=value}return safe}
-$('export').onclick=()=>{const blob=new Blob([JSON.stringify({app:'lotus-culture-reconstruction',version:1,progress},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lotus-culture-progression.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$('status').textContent='Export préparé : vérifiez vos téléchargements.'};
+$('export').onclick=()=>{let exportProgress;try{exportProgress=readMergedProgress()}catch{$('status').textContent='Export indisponible : impossible de lire la progression enregistrée.';return}const blob=new Blob([JSON.stringify({app:'lotus-culture-reconstruction',version:1,progress:exportProgress},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lotus-culture-progression.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$('status').textContent='Export préparé : vérifiez vos téléchargements.'};
 $('import').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>1000000)throw Error('Fichier trop volumineux');const safe=validateSave(JSON.parse(await file.text()));if(!confirm('Fusionner les réussites de cette sauvegarde avec votre progression actuelle ?'))return;for(const [id,value] of Object.entries(safe))progress[id]=progress[id]===true||value;persist();catalogue();$('quiz').hidden=true;pool=[];index=0}catch(error){$('status').textContent='Import refusé : '+error.message+'. Progression actuelle conservée.'}finally{e.target.value=''}};
 </script><script>
 (()=>{'use strict';const key='lotus-culture-accessibilite-v1';const options=[['a11y-large','large-text'],['a11y-contrast','high-contrast'],['a11y-visual','visual-mode']];let settings={};try{const v=JSON.parse(localStorage.getItem(key)||'{}');if(v&&typeof v==='object'&&!Array.isArray(v))settings=v}catch{}
