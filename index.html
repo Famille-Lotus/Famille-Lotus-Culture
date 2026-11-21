@@ -22,7 +22,21 @@ const LEVELS={"base-0": "facile", "base-1": "facile", "base-2": "facile", "base-
 function selectedBank(){const level=$('difficulty').value;return BANK.filter(q=>level==='tous'||!level||LEVELS[q.id]===level)}
 let pool=[],index=0,answered=false;
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(progress));$('status').textContent='Progression enregistrée dans ce navigateur.'}catch{$('status').textContent='Progression temporaire : enregistrement indisponible.'}}
+function persist() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) throw new Error('Sauvegarde invalide');
+    const merged = {...saved, ...progress};
+    for (const [id, passed] of Object.entries(saved)) {
+      if (passed === true) Object.defineProperty(merged, id, {value:true, enumerable:true, writable:true, configurable:true});
+    }
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    progress = merged;
+    $('status').textContent = 'Progression enregistrée dans ce navigateur.';
+  } catch {
+    $('status').textContent = 'Progression temporaire : enregistrement indisponible.';
+  }
+}
 const CATEGORY_ICONS={"Culture générale": "🧠", "Cinéma": "🎬", "Géographie": "🌍", "Histoire": "📜", "Sciences": "🔬", "Animaux": "🐾", "Musiques du monde": "🎵", "Logique": "🧩", "Mémoire": "🗂️", "Mathématiques": "➗", "Français": "📖", "Anglais": "🔤", "Informatique": "💻", "Économie": "📈", "Statistiques": "📊", "Biologie cellulaire": "🧬", "Méthodologie": "📝", "Acteurs et actrices": "🎭", "Gastronomie du monde": "🍽️", "Afrique": "🌍", "RDC": "🇨🇩", "Histoire des inventions": "💡", "Astronomie": "🔭", "Éducation financière": "💶", "Dictée et orthographe": "✍️", "Analyse mathématique": "∫", "Découverte du monde": "🧭", "Art": "🎨", "Musées": "🏛️", "Sport": "🏅", "Paroles à compléter — musiques du monde et africaines": "🎤", "CEB — Français": "📖", "CEB — Mathématiques": "➗", "CEB — Sciences": "🔬", "CEB — Histoire et géographie": "🗺️", "CE1D — Français": "📖", "CE1D — Mathématiques": "➗", "CE1D — Sciences": "🔬", "CE1D — Anglais (écrit)": "🔤", "CE1D — Néerlandais (écrit)": "💬"};
 const CATEGORY_COLORS={"Toutes les catégories": "#f96c74", "Culture générale": "#f9a16c", "Cinéma": "#f9de6c", "Géographie": "#7df96c", "Histoire": "#6cf9e3", "Sciences": "#6cc1f9", "Animaux": "#f9757a", "Musiques du monde": "#f9a975", "Logique": "#f9e375", "Mémoire": "#83f975", "Mathématiques": "#75f9e7", "Français": "#75c3f9", "Anglais": "#fa7e80", "Informatique": "#fab17e", "Économie": "#fae77e", "Statistiques": "#88fa7e", "Biologie cellulaire": "#7efaeb", "Méthodologie": "#7ec4fa", "Acteurs et actrices": "#fa8787", "Gastronomie du monde": "#fab987", "Afrique": "#faeb87", "RDC": "#8efa87", "Histoire des inventions": "#87faee", "Astronomie": "#87c6fa", "Éducation financière": "#fa918f", "Dictée et orthographe": "#fac08f", "Analyse mathématique": "#faee8f", "Découverte du monde": "#95fa8f", "Art": "#8ffaf2", "Musées": "#8fc8fa", "Sport": "#fb9c98", "Paroles à compléter — musiques du monde et africaines": "#fbc698", "CEB — Français": "#fbf198", "CEB — Mathématiques": "#9bfb98", "CEB — Sciences": "#98fbf4", "CEB — Histoire et géographie": "#98cbfb", "CE1D — Français": "#fba6a1", "CE1D — Mathématiques": "#fbcda1", "CE1D — Sciences": "#fbf4a1", "CE1D — Anglais (écrit)": "#a2fba1", "CE1D — Néerlandais (écrit)": "#a1fbf7"};
 function catalogue(){const root=$('catalogue'),eligible=selectedBank(),all=$('all');root.replaceChildren();root.append(all);all.setAttribute('style','--tile-bg:'+CATEGORY_COLORS['Toutes les catégories']);$('all-count').textContent=eligible.length+' questions';$('level-count').textContent=eligible.length+' questions pour le niveau sélectionné.';$('all').disabled=!eligible.length;$('total').textContent=BANK.length+' questions disponibles dans cette base ; objectif : 50 000.';const done=Object.keys(progress).filter(id=>BANK.some(q=>q.id===id)&&progress[id]===true).length;$('progression').textContent=done+' questions réussies sur '+BANK.length}
